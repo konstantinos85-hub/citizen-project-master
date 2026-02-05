@@ -3,10 +3,10 @@ provider "aws" {
   region = var.aws_region
 }
 
-# 2. Ομάδα Ασφάλειας
+# 2. Ομάδα Ασφάλειας (Security Group)
 resource "aws_security_group" "minikube_sg" {
   name        = "minikube-sg"
-  description = "Allow SSH and Minikube"
+  description = "Allow SSH and Minikube access"
 
   ingress {
     from_port   = 22
@@ -30,7 +30,8 @@ resource "aws_security_group" "minikube_sg" {
   }
 }
 
-# resource "aws_instance" "minikube_server" {
+# 3. Δημιουργία Εικονικής Μηχανής (EC2 Instance)
+resource "aws_instance" "minikube_server" {
   ami                    = var.ami
   instance_type          = var.instance_type
   key_name               = var.key_name
@@ -38,33 +39,34 @@ resource "aws_security_group" "minikube_sg" {
 
   user_data = <<EOF
 #!/bin/bash
-# 1. Swap
+# 1. Δημιουργία Swap (Απαραίτητο για μικρά instances)
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
-# 2. Docker (Απλοποιημένη εγκατάσταση για Ubuntu)
+# 2. Εγκατάσταση Docker
 sudo apt-get update -y
 sudo apt-get install -y docker.io
 sudo systemctl start docker
 sudo systemctl enable docker
 sudo usermod -aG docker ubuntu
 
-# 3. Minikube (ΠΛΗΡΕΣ URL - ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ)
+# 3. Εγκατάσταση Minikube (Πλήρες URL)
 curl -Lo minikube https://storage.googleapis.com
 sudo install minikube /usr/local/bin/minikube
 
-# 4. Kubectl (ΠΛΗΡΕΣ URL - ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ)
+# 4. Εγκατάσταση Kubectl (Πλήρες URL)
 curl -Lo kubectl https://dl.k8s.io
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-# 5. Σήμα ολοκλήρωσης
+# 5. Σηματοδότηση ολοκλήρωσης για τον Provisioner
 touch /tmp/docker_minikube_installed
 EOF
 }
 
-# 4. Απομακρυσμένη Ρύθμιση
+# 4. Απομακρυσμένη Ρύθμιση και Διάταξη (Provisioning)
 resource "null_resource" "remote_setup" {
   depends_on = [aws_instance.minikube_server]
 
@@ -76,32 +78,27 @@ resource "null_resource" "remote_setup" {
   }
 
   provisioner "remote-exec" {
-        inline = [
-      # 1. Αναμονή μέχρι να εμφανιστεί το αρχείο minikube (σημαίνει ότι το download πέτυχε)
+    inline = [
+      # Αναμονή για την εγκατάσταση των εργαλείων
       "while [ ! -f /usr/local/bin/minikube ]; do echo 'Αναμονή για το αρχείο Minikube...'; sleep 20; done",
-      
-      # 2. Αναμονή για το σήμα ολοκλήρωσης του user_data
       "while [ ! -f /tmp/docker_minikube_installed ]; do echo 'Περιμένω την ολοκλήρωση των tools...'; sleep 20; done",
       
-      # 3. Μικρή καθυστέρηση για να "κάτσουν" τα δικαιώματα
       "sleep 10",
-      "sudo chmod +x /usr/local/bin/minikube",
+      "sudo chmod +x /usr/local/bin/minikube /usr/local/bin/kubectl",
 
-      # 4. Εκκίνηση Minikube (χρησιμοποιώντας το sudo -u ubuntu)
+      # Εκκίνηση Minikube ως χρήστης ubuntu
       "sudo -u ubuntu /usr/local/bin/minikube start -p test --driver=docker",
       
-      # 5. Αναμονή για το Cluster
+      # Αναμονή για την ετοιμότητα του Cluster
       "until /usr/local/bin/minikube kubectl -p test -- get nodes | grep -w 'Ready'; do echo 'Περιμένω το Cluster...'; sleep 20; done",
       
-      # 6. Git και Deployment
+      # Κλωνοποίηση και Deployment
       "rm -rf /home/ubuntu/app",
       "git clone https://github.com/konstantinos85-hub/citizen-project-master.git /home/ubuntu/app",
       "cd /home/ubuntu/app && /usr/local/bin/minikube kubectl -p test -- apply -f yaml/",
       
       "touch /tmp/app_depl_complete"
     ]
-
-
   }
 
   provisioner "remote-exec" {
