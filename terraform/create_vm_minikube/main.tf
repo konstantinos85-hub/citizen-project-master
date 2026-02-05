@@ -22,10 +22,10 @@ resource "aws_security_group" "minikube_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Προσθήκη θύρας 80 για πρόσβαση στην εφαρμογή μέσω browser
+  # Πρόσβαση στην RESTful εφαρμογή (Citizen App Port 8089)
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 8089
+    to_port     = 8089
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -47,7 +47,7 @@ resource "aws_instance" "minikube_server" {
 
   user_data = <<EOF
 #!/bin/bash
-# 1. Δημιουργία Swap (Κρίσιμο για t3.micro)
+# 1. Δημιουργία Swap (Κρίσιμο για t3.micro μνήμη)
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
@@ -61,7 +61,7 @@ sudo systemctl start docker
 sudo systemctl enable docker
 sudo usermod -aG docker ubuntu
 
-# 3. Εγκατάσταση Minikube (Πλήρες URL .deb)
+# 3. Εγκατάσταση Minikube (.deb method - Πλήρες URL)
 curl -LO https://storage.googleapis.com
 sudo dpkg -i minikube_latest_amd64.deb
 
@@ -100,7 +100,7 @@ resource "null_resource" "remote_setup" {
       # Αναμονή για την ετοιμότητα του Cluster μέσω του κανονικού kubectl
       "until /usr/local/bin/kubectl get nodes | grep -w 'Ready'; do echo 'Περιμένω το Cluster...'; sleep 20; done",
       
-      # Κλωνοποίηση και Deployment
+      # Κλωνοποίηση και Deployment (Διορθωμένο URL και Path)
       "rm -rf /home/ubuntu/app",
       "git clone https://github.com /home/ubuntu/app",
       "cd /home/ubuntu/app && /usr/local/bin/kubectl apply -f yaml/",
