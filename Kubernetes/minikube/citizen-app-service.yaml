@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: citizen-service-lb
+spec:
+  # Προσδιορίζουμε πως η υπηρεσία θα είναι τύπου εξισορροπητή φορτίου
+  type: LoadBalancer 
+  selector:
+    # Επιλογέας ενοτήτων για τη σύνδεση με το Deployment
+    app: citizen-service 
+  ports:
+    - protocol: TCP
+      port: 80          # Η θύρα στην οποία δέχεται αιτήσεις η υπηρεσία
+      targetPort: 8089 # Η θύρα στην οποία ακούει το δοχείο (container)

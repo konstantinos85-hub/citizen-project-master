@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-claim # Το όνομα που χρησιμοποιήσαμε στο StatefulSet (Σχήμα 34)
+spec:
+  # Mode πρόσβασης: ReadWriteOnce (επιτρέπει εγγραφή από έναν κόμβο)
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem # Τυπικό σύστημα αρχείων
+  resources:
+    requests:
+      storage: 5Gi # Απαίτηση μεγέθους 5GB
+  selector:
+    # Επιλογέας για το φιλτράρισμα των διαθέσιμων χώρων (για το minikube)
+    matchLabels:
+      app: mysql

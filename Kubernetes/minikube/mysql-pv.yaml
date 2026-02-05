@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  labels:
+    app: mysql # Η ταμπέλα που ταιριάζει με τον επιλογέα (selector) του PVC
+spec:
+  capacity:
+    storage: 5Gi # Απαίτηση 5 GB μεγέθους χώρου
+  accessModes:
+    - ReadWriteOnce # Mode πρόσβασης ReadWriteOnce
+  volumeMode: Filesystem # Είδος χώρου FileSystem
+  persistentVolumeReclaimPolicy: Retain # Διατήρηση δεδομένων μετά τη διαγραφή
+  hostPath:
+    path: "/data/mysql" # Αντιστοίχιση στο μονοπάτι του συστήματος φιλοξενίας

@@ -1,0 +1,53 @@
+# Σημείωση: Η γραμμή 'version' παραλείπεται καθώς είναι πλέον προαιρετική (obsolete) το 2025
+services:
+  # --- Υπηρεσία ΣΔΒΔ (MySQL) ---
+  db:
+    image: mysql:8.0
+    container_name: citizen-db
+    restart: always
+    environment:
+      # Δημιουργία της βάσης δεδομένων
+      MYSQL_DATABASE: citizen
+      # Δημιουργία μη-ριζικού χρήστη για ασφάλεια (Best Practice)
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: citizen123
+      # Ισχυρός κωδικός για τον root χρήστη
+      MYSQL_ROOT_PASSWORD: root_secure_pass
+    # ΑΣΦΑΛΕΙΑ: Δεν εκθέτουμε την πόρτα 3306 στο τοπικό σύστημα (host).
+    # Η βάση είναι προσβάσιμη ΜΟΝΟ από την υπηρεσία citizen-service εντός του δικτύου.
+    volumes:
+      - citizen_db_data:/var/lib/mysql
+    networks:
+      - citizen-network
+
+  # --- RESTful Υπηρεσία (Spring Boot Backend) ---
+  citizen-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: citizen-app
+    restart: on-failure
+    ports:
+      - "8089:8089" # Μόνο αυτή η θύρα είναι διαθέσιμη στο τοπικό σύστημα
+    environment:
+      # Σύνδεση με τη βάση χρησιμοποιώντας το όνομα του service "db" (Service Discovery)
+      DB_HOST: db
+      DB_NAME: citizen
+      DB_USER: appuser
+      DB_PASSWORD: citizen123
+    depends_on:
+      - db
+    networks:
+      - citizen-network
+
+# --- Ορισμός Δικτύων ---
+networks:
+  citizen-network:
+    # Οριζόμενο από τον χρήστη δίκτυο (Bridge) για την απομόνωση των συστατικών
+    driver: bridge
+
+# --- Ορισμός Volumes ---
+volumes:
+  # Επίμονος αποθηκευτικός χώρος που ταυτίζεται με το volume του build.sh
+  citizen_db_data:
+    external: false

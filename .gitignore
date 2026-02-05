@@ -1,0 +1,29 @@
+# Maven
+target/
+**/target/
+*.jar
+*.war
+
+# IDE (Eclipse/IntelliJ)
+.settings/
+.project
+.classpath
+.idea/
+*.iml
+.metadata/
+
+# macOS
+.DS_Store
+._*
+
+# Logs
+*.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.pem
+rootkey.csv
+*.hcl

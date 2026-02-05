@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  serviceName: "mysql-service"
+  replicas: 1 # Δημιουργία 1 αντιγράφου
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.3.0 # Έκδοση 8.3.0 από Docker Hub
+        ports:
+        - containerPort: 3306
+          name: mysql
+        resources: # Περιορισμοί [1, 2] CPU & [2048, 4096] MB
+          requests:
+            cpu: "1000m"
+            memory: "2048Mi"
+          limits:
+            cpu: "2000m"
+            memory: "4096Mi"
+        env: # Οι 4 μεταβλητές περιβάλλοντος
+        - name: MYSQL_RANDOM_ROOT_PASSWORD
+          value: "true" # 1. Τυχαίος κωδικός root
+        - name: MYSQL_DATABASE
+          value: "citizen_db" # 2. Όνομα βάσης
+        - name: MYSQL_USER # 3. Μη ριζικός χρήστης από Secret
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: username
+        - name: MYSQL_PASSWORD # 4. Κωδικός από Secret
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        volumeMounts: # Προσάρτηση αποθηκευτικού χώρου
+        - name: mysql-vol
+          mountPath: /var/lib/mysql # Φάκελος δεδομένων MySQL
+  volumeClaimTemplates: # Αίτηση χώρου (mysql-claim)
+  - metadata:
+      name: mysql-vol
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Gi # Ο χώρος για το mysql-claim

@@ -1,0 +1,25 @@
+# Εξαιρέσεις φακέλων build (Maven/Gradle)
+target/
+**/target/
+build/
+
+# Αρχεία του Git
+.git
+.gitignore
+
+# Αρχεία IDE (IntelliJ, Eclipse, VS Code)
+.idea/
+*.iml
+.settings/
+.classpath
+.project
+.vscode/
+
+# Logs και προσωρινά αρχεία
+*.log
+tmp/
+
+# Docker αρχεία
+Dockerfile
+docker-compose.yml
+.dockerignore
