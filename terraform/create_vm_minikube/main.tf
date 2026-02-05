@@ -30,40 +30,36 @@ resource "aws_security_group" "minikube_sg" {
   }
 }
 
-# 3. Εικονική Μηχανή με Διορθωμένο User Data
-resource "aws_instance" "minikube_server" {
+# resource "aws_instance" "minikube_server" {
   ami                    = var.ami
   instance_type          = var.instance_type
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.minikube_sg.id]
 
-    user_data = <<EOF
+  user_data = <<EOF
 #!/bin/bash
-# 1. Δημιουργία Swap (Απαραίτητο για t3.micro)
+# 1. Swap
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
-# 2. Εγκατάσταση Docker
+# 2. Docker (Απλοποιημένη εγκατάσταση για Ubuntu)
 sudo apt-get update -y
-sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-curl -fsSL https://download.docker.com | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update -y
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+sudo apt-get install -y docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
 sudo usermod -aG docker ubuntu
 
-# 3. Εγκατάσταση Minikube (ΠΛΗΡΕΣ URL)
-curl -LO https://github.com
-sudo install minikube-linux-amd64 /usr/local/bin/minikube
+# 3. Minikube (ΠΛΗΡΕΣ URL - ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ)
+curl -Lo minikube https://storage.googleapis.com
+sudo install minikube /usr/local/bin/minikube
 
-# 4. Εγκατάσταση Kubectl (ΠΛΗΡΕΣ URL)
-curl -LO "https://dl.k8s.io(curl -L -s https://dl.k8s.io)/bin/linux/amd64/kubectl"
+# 4. Kubectl (ΠΛΗΡΕΣ URL - ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ)
+curl -Lo kubectl https://dl.k8s.io
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-# 5. Σηματοδότηση ολοκλήρωσης
+# 5. Σήμα ολοκλήρωσης
 touch /tmp/docker_minikube_installed
 EOF
 }
