@@ -37,15 +37,16 @@ resource "aws_instance" "minikube_server" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.minikube_sg.id]
 
-  user_data = <<EOF
+    user_data = <<EOF
 #!/bin/bash
-# Swap is MANDATORY for t3.micro
+# 1. Δημιουργία Swap (Απαραίτητο για t3.micro)
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
+# 2. Εγκατάσταση Docker
 sudo apt-get update -y
 sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 curl -fsSL https://download.docker.com | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
@@ -54,12 +55,15 @@ sudo apt-get update -y
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 sudo usermod -aG docker ubuntu
 
-curl -LO https://storage.googleapis.com
+# 3. Εγκατάσταση Minikube (ΠΛΗΡΕΣ URL)
+curl -LO https://github.com
 sudo install minikube-linux-amd64 /usr/local/bin/minikube
 
+# 4. Εγκατάσταση Kubectl (ΠΛΗΡΕΣ URL)
 curl -LO "https://dl.k8s.io(curl -L -s https://dl.k8s.io)/bin/linux/amd64/kubectl"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
+# 5. Σηματοδότηση ολοκλήρωσης
 touch /tmp/docker_minikube_installed
 EOF
 }
