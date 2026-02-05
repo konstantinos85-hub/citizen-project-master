@@ -76,20 +76,28 @@ resource "null_resource" "remote_setup" {
   }
 
   provisioner "remote-exec" {
-    inline = [
+        inline = [
+      # 1. Αναμονή για το σήμα από το user_data
       "while [ ! -f /tmp/docker_minikube_installed ]; do echo 'Waiting for tools...'; sleep 10; done",
+      
+      # 2. Διασφάλιση δικαιωμάτων εκτέλεσης (για σιγουριά)
+      "sudo chmod +x /usr/local/bin/minikube /usr/local/bin/kubectl",
+      
+      # 3. Εκκίνηση με πλήρη διαδρομή και χρήση του sudo για το group docker
       "sudo usermod -aG docker ubuntu",
-      "minikube start -p test --driver=docker",
-      "until minikube kubectl -p test -- get nodes | grep -w 'Ready'; do echo 'Waiting for cluster...'; sleep 10; done",
+      "sg docker -c '/usr/local/bin/minikube start -p test --driver=docker'",
       
-      # Διορθωμένο Git Clone (πλήρες URL και σωστός φάκελος)
+      # 4. Αναμονή για το cluster
+      "until /usr/local/bin/minikube kubectl -p test -- get nodes | grep -w 'Ready'; do echo 'Waiting for cluster...'; sleep 10; done",
+      
+      # 5. Git Clone και Deployment
+      "rm -rf /home/ubuntu/app", # Καθαρισμός αν υπάρχει ήδη
       "git clone https://github.com /home/ubuntu/app",
-      "cd /home/ubuntu/app",
+      "cd /home/ubuntu/app && /usr/local/bin/minikube kubectl -p test -- apply -f yaml/",
       
-      # Εφαρμογή των YAML (το path εξαρτάται από τη δομή του repo σου)
-      "minikube kubectl -p test -- apply -f /home/ubuntu/app/yaml/",
       "touch /tmp/app_depl_complete"
     ]
+
   }
 
   provisioner "remote-exec" {
