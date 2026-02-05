@@ -80,18 +80,31 @@ resource "null_resource" "remote_setup" {
   }
 
   provisioner "remote-exec" {
-    inline = [
-      "while [ ! -f /tmp/docker_minikube_installed ]; do echo 'Περιμένω την εγκατάσταση του Docker...'; sleep 20; done",
+        inline = [
+      # 1. Αναμονή μέχρι να εμφανιστεί το αρχείο minikube (σημαίνει ότι το download πέτυχε)
+      "while [ ! -f /usr/local/bin/minikube ]; do echo 'Αναμονή για το αρχείο Minikube...'; sleep 20; done",
+      
+      # 2. Αναμονή για το σήμα ολοκλήρωσης του user_data
+      "while [ ! -f /tmp/docker_minikube_installed ]; do echo 'Περιμένω την ολοκλήρωση των tools...'; sleep 20; done",
+      
+      # 3. Μικρή καθυστέρηση για να "κάτσουν" τα δικαιώματα
       "sleep 10",
-      # Χρήση του minikube για εκκίνηση
+      "sudo chmod +x /usr/local/bin/minikube",
+
+      # 4. Εκκίνηση Minikube (χρησιμοποιώντας το sudo -u ubuntu)
       "sudo -u ubuntu /usr/local/bin/minikube start -p test --driver=docker",
-      "until /usr/local/bin/minikube kubectl -p test -- get nodes | grep -w 'Ready'; do echo 'Περιμένω το Cluster...'; sleep 10; done",
+      
+      # 5. Αναμονή για το Cluster
+      "until /usr/local/bin/minikube kubectl -p test -- get nodes | grep -w 'Ready'; do echo 'Περιμένω το Cluster...'; sleep 20; done",
+      
+      # 6. Git και Deployment
       "rm -rf /home/ubuntu/app",
-      "git clone https://github.com/konstantinos85-hub/citizen-project-master.git/home/ubuntu/app",
+      "git clone https://github.com/konstantinos85-hub/citizen-project-master.git /home/ubuntu/app",
       "cd /home/ubuntu/app && /usr/local/bin/minikube kubectl -p test -- apply -f yaml/",
       
       "touch /tmp/app_depl_complete"
     ]
+
 
   }
 
