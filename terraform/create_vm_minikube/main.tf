@@ -22,6 +22,14 @@ resource "aws_security_group" "minikube_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Προσθήκη θύρας 80 για πρόσβαση στην εφαρμογή μέσω browser
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -37,32 +45,33 @@ resource "aws_instance" "minikube_server" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.minikube_sg.id]
 
-    user_data = <<EOF
+  user_data = <<EOF
 #!/bin/bash
-# 1. Swap
+# 1. Δημιουργία Swap (Κρίσιμο για t3.micro)
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
-# 2. Docker
+# 2. Εγκατάσταση Docker
 sudo apt-get update -y
 sudo apt-get install -y docker.io
 sudo systemctl start docker
+sudo systemctl enable docker
 sudo usermod -aG docker ubuntu
 
-# 3. Minikube (.deb method)
+# 3. Εγκατάσταση Minikube (Πλήρες URL .deb)
 curl -LO https://storage.googleapis.com
 sudo dpkg -i minikube_latest_amd64.deb
 
-# 4. Kubectl
+# 4. Εγκατάσταση Kubectl (Πλήρες URL)
 curl -LO "https://dl.k8s.io"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-# 5. Signal
+# 5. Σηματοδότηση ολοκλήρωσης
 touch /tmp/docker_minikube_installed
 EOF
-
 }
 
 # 4. Απομακρυσμένη Ρύθμιση και Διάταξη (Provisioning)
@@ -85,16 +94,16 @@ resource "null_resource" "remote_setup" {
       "sleep 10",
       "sudo chmod +x /usr/local/bin/minikube /usr/local/bin/kubectl",
 
-      # Εκκίνηση Minikube ως χρήστης ubuntu
+      # Εκκίνηση Minikube
       "sudo -u ubuntu /usr/local/bin/minikube start -p test --driver=docker",
       
-      # Αναμονή για την ετοιμότητα του Cluster
-      "until /usr/local/bin/minikube kubectl -p test -- get nodes | grep -w 'Ready'; do echo 'Περιμένω το Cluster...'; sleep 20; done",
+      # Αναμονή για την ετοιμότητα του Cluster μέσω του κανονικού kubectl
+      "until /usr/local/bin/kubectl get nodes | grep -w 'Ready'; do echo 'Περιμένω το Cluster...'; sleep 20; done",
       
       # Κλωνοποίηση και Deployment
       "rm -rf /home/ubuntu/app",
-      "git clone https://github.com/konstantinos85-hub/citizen-project-master.git /home/ubuntu/app",
-      "cd /home/ubuntu/app && /usr/local/bin/minikube kubectl -p test -- apply -f yaml/",
+      "git clone https://github.com /home/ubuntu/app",
+      "cd /home/ubuntu/app && /usr/local/bin/kubectl apply -f yaml/",
       
       "touch /tmp/app_depl_complete"
     ]
