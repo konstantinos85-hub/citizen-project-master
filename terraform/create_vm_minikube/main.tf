@@ -1,12 +1,90 @@
-# 1. Ορισμός του Παρόχου AWS
 provider "aws" {
   region = var.aws_region
 }
 
-# 2. Ομάδα Ασφάλειας (Security Group)
+resource "aws_instance" "minikube" {
+  ami           = var.ami
+  instance_type = var.instance_type
+  key_name      = var.key_name
+
+  user_data = <<-EOT
+              #!/bin/bash
+              sudo apt-get update -y
+              # Εγκατάσταση Docker
+              sudo apt-get install -y docker.io
+              sudo systemctl enable docker
+              sudo systemctl start docker
+              sudo usermod -aG docker ubuntu
+              
+              # Εγκατάσταση Minikube
+              curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+              chmod +x minikube
+              sudo install minikube /usr/local/bin/
+                  
+              touch /tmp/docker_minikube_installed	
+              EOT
+
+  vpc_security_group_ids = [aws_security_group.minikube_sg.id]
+
+  tags = {
+    Name = "Minikube-EC2"
+  }
+}
+
+resource "null_resource" "wait_for_minikube_instance" {
+  depends_on = [aws_instance.minikube]
+    
+  provisioner "remote-exec" {
+    inline = [
+      "while [ ! -f /tmp/docker_minikube_installed ]; do sleep 10; done",
+      "sudo usermod -aG docker ubuntu",
+      # Εκκίνηση minikube
+      "sudo -u ubuntu nohup minikube start -p test --driver=docker &",
+      "echo 'Starting minikube'",        
+              
+      "while ! sudo -u ubuntu minikube kubectl -p test -- get nodes > /dev/null 2>&1; do",
+      "echo 'Waiting for Kubernetes API to be ready...'",
+      "sleep 10",
+      "done",
+      "echo 'Minikube is ready!'",
+      
+      # Εδώ βάζουμε το ΔΙΚΟ ΣΟΥ repo
+      "git clone https://github.com/konstantinos85-hub/citizen-project-master.git",
+	  "cd citizen-project-master",
+	  "echo 'Repo cloned!'",
+	
+      # Εδώ βάζουμε το φάκελο yaml/ που έχεις στο repo σου
+      "sudo -u ubuntu minikube kubectl -p test -- apply -f yaml/",
+      "touch /tmp/app_depl_complete"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      # ΠΡΟΣΟΧΗ: Εδώ το μονοπάτι για το Mac σου
+      private_key = file("${path.module}/cloud.test.pem")
+      host        = aws_instance.minikube.public_ip
+    }
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "while [ ! -f /tmp/app_depl_complete ]; do sleep 10; done",
+      "echo 'App deployment script completed'"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file("${path.module}/cloud.test.pem")
+      host        = aws_instance.minikube.public_ip
+    }
+  }
+}
+
 resource "aws_security_group" "minikube_sg" {
   name        = "minikube-sg"
-  description = "Allow SSH and Minikube access"
+  description = "Allow SSH, Minikube and App Port"
 
   ingress {
     from_port   = 22
@@ -22,7 +100,7 @@ resource "aws_security_group" "minikube_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Πρόσβαση στην RESTful εφαρμογή (Citizen App Port 8089)
+  # Προσθήκη της θύρας 8089 για την εφαρμογή σου
   ingress {
     from_port   = 8089
     to_port     = 8089
@@ -35,83 +113,5 @@ resource "aws_security_group" "minikube_sg" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# 3. Δημιουργία Εικονικής Μηχανής (EC2 Instance)
-resource "aws_instance" "minikube_server" {
-  ami                    = var.ami
-  instance_type          = var.instance_type
-  key_name               = var.key_name
-  vpc_security_group_ids = [aws_security_group.minikube_sg.id]
-
-  user_data = <<EOF
-#!/bin/bash
-# 1. Δημιουργία Swap (Κρίσιμο για t3.micro μνήμη)
-sudo fallocate -l 2G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-
-# 2. Εγκατάσταση Docker
-sudo apt-get update -y
-sudo apt-get install -y docker.io
-sudo systemctl start docker
-sudo systemctl enable docker
-sudo usermod -aG docker ubuntu
-
-# 3. Εγκατάσταση Minikube (.deb method - Πλήρες URL)
-curl -LO https://storage.googleapis.com
-sudo dpkg -i minikube_latest_amd64.deb
-
-# 4. Εγκατάσταση Kubectl (Πλήρες URL)
-curl -LO "https://dl.k8s.io"
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-
-# 5. Σηματοδότηση ολοκλήρωσης
-touch /tmp/docker_minikube_installed
-EOF
-}
-
-# 4. Απομακρυσμένη Ρύθμιση και Διάταξη (Provisioning)
-resource "null_resource" "remote_setup" {
-  depends_on = [aws_instance.minikube_server]
-
-  connection {
-    type        = "ssh"
-    user        = "ubuntu"
-    private_key = file("${path.module}/cloud.test.pem")
-    host        = aws_instance.minikube_server.public_ip
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      # Αναμονή για την εγκατάσταση των εργαλείων
-      "while [ ! -f /usr/local/bin/minikube ]; do echo 'Αναμονή για το αρχείο Minikube...'; sleep 20; done",
-      "while [ ! -f /tmp/docker_minikube_installed ]; do echo 'Περιμένω την ολοκλήρωση των tools...'; sleep 20; done",
-      
-      "sleep 10",
-      "sudo chmod +x /usr/local/bin/minikube /usr/local/bin/kubectl",
-
-      # Εκκίνηση Minikube
-      "sudo -u ubuntu /usr/local/bin/minikube start -p test --driver=docker",
-      
-      # Αναμονή για την ετοιμότητα του Cluster μέσω του κανονικού kubectl
-      "until /usr/local/bin/kubectl get nodes | grep -w 'Ready'; do echo 'Περιμένω το Cluster...'; sleep 20; done",
-      
-      # Κλωνοποίηση και Deployment (Διορθωμένο URL και Path)
-      "rm -rf /home/ubuntu/app",
-      "git clone https://github.com /home/ubuntu/app",
-      "cd /home/ubuntu/app && /usr/local/bin/kubectl apply -f yaml/",
-      
-      "touch /tmp/app_depl_complete"
-    ]
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "if [ -f /tmp/app_depl_complete ]; then echo 'Deployment finished successfully!'; else echo 'Deployment failed!'; exit 1; fi"
-    ]
   }
 }
