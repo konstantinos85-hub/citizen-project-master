@@ -37,33 +37,32 @@ resource "aws_instance" "minikube_server" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.minikube_sg.id]
 
-  user_data = <<EOF
+    user_data = <<EOF
 #!/bin/bash
-# 1. Δημιουργία Swap (Απαραίτητο για μικρά instances)
+# 1. Swap
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
-# 2. Εγκατάσταση Docker
+# 2. Docker
 sudo apt-get update -y
 sudo apt-get install -y docker.io
 sudo systemctl start docker
-sudo systemctl enable docker
 sudo usermod -aG docker ubuntu
 
-# 3. Εγκατάσταση Minikube (Πλήρες URL)
-curl -Lo minikube https://storage.googleapis.com
-sudo install minikube /usr/local/bin/minikube
+# 3. Minikube (.deb method)
+curl -LO https://storage.googleapis.com
+sudo dpkg -i minikube_latest_amd64.deb
 
-# 4. Εγκατάσταση Kubectl (Πλήρες URL)
-curl -Lo kubectl https://dl.k8s.io
+# 4. Kubectl
+curl -LO "https://dl.k8s.io"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-# 5. Σηματοδότηση ολοκλήρωσης για τον Provisioner
+# 5. Signal
 touch /tmp/docker_minikube_installed
 EOF
+
 }
 
 # 4. Απομακρυσμένη Ρύθμιση και Διάταξη (Provisioning)
