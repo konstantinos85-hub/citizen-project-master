@@ -39,14 +39,13 @@ resource "aws_instance" "minikube_server" {
 
   user_data = <<EOF
 #!/bin/bash
-# Προσθήκη Swap για να αντέξει η μηχανή το Minikube
+# Swap is MANDATORY for t3.micro
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
-# Διορθωμένη εγκατάσταση Docker
 sudo apt-get update -y
 sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 curl -fsSL https://download.docker.com | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
@@ -55,11 +54,9 @@ sudo apt-get update -y
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 sudo usermod -aG docker ubuntu
 
-# Διορθωμένη εγκατάσταση Minikube
 curl -LO https://storage.googleapis.com
 sudo install minikube-linux-amd64 /usr/local/bin/minikube
 
-# Διορθωμένη εγκατάσταση Kubectl
 curl -LO "https://dl.k8s.io(curl -L -s https://dl.k8s.io)/bin/linux/amd64/kubectl"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 

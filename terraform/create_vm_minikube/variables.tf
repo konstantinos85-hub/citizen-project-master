@@ -16,7 +16,7 @@ variable "key_name" {
 variable "instance_type" {
   description = "Ο τύπος του στιγμιότυπου (instance type) της εικονικής μηχανής"
   type        = string
-  default     = "t2.micro"
+  default     = "t3.micro"
 }
 
 # 4. Αναγνωριστικό εικόνας AMI
