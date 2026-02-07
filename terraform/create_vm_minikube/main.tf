@@ -38,7 +38,7 @@ resource "terraform_data" "setup_minikube" {
     host        = aws_instance.minikube.public_ip
   }
 
-   provisioner "remote-exec" {
+  provisioner "remote-exec" {
     inline = [
       "while [ ! -f /tmp/docker_minikube_installed ]; do sleep 10; done",
       "sudo usermod -aG docker ubuntu",
@@ -50,19 +50,15 @@ resource "terraform_data" "setup_minikube" {
       "git clone ${var.github_repo}",
       "cd citizen-project-master",
       
-      # 1. Πρώτα κάνεις apply τα YAML
       "sudo -u ubuntu minikube kubectl -p test -- apply -f yaml/",
-      
-      # 2. Περιμένεις λίγα δευτερόλεπτα να σηκωθεί το service
       "sleep 15", 
       
-      # 3. ΕΔΩ ΒΑΖΕΙΣ ΤΗΝ ΕΝΤΟΛΗ
       "sudo -u ubuntu nohup minikube kubectl -p test -- port-forward --address 0.0.0.0 service/citizen-service-lb 8089:8089 > /dev/null 2>&1 &",
       
       "echo 'Deployment and Port-Forwarding complete!'"
     ]
   }
-
+} # <-- ΑΥΤΟ ΤΟ ΑΓΚΙΣΤΡΟ ΠΙΘΑΝΩΣ ΕΛΕΙΠΕ
 
 resource "aws_security_group" "minikube_sg" {
   name        = "minikube-sg"
