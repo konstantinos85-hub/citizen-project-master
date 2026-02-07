@@ -33,32 +33,26 @@ resource "null_resource" "wait_for_minikube_instance" {
   depends_on = [aws_instance.minikube]
     
   provisioner "remote-exec" {
-    inline = [
+        inline = [
       "while [ ! -f /tmp/docker_minikube_installed ]; do sleep 10; done",
       "sudo usermod -aG docker ubuntu",
-      
-      # Προσθήκη restart για να σιγουρέψουμε το Docker group
       "sudo systemctl restart docker",
-      "sleep 10",
-
-      # Εκκίνηση Minikube ΧΩΡΙΣ nohup για να το αναγκάσουμε να ξεκινήσει τώρα
+      "sleep 5",
       "sudo -u ubuntu minikube start -p test --driver=docker",
-      "echo 'Minikube started successfully!'",        
-              
-      "echo 'Waiting for Kubernetes API to be ready...'",
       "while ! sudo -u ubuntu minikube kubectl -p test -- get nodes > /dev/null 2>&1; do sleep 10; done",
-      "echo 'Minikube is ready!'",
       
       "git clone https://github.com/konstantinos85-hub/citizen-project-master.git",
       "cd citizen-project-master",
-      
+
+      "eval $(minikube -p test docker-env)",
+      "docker build -t citizen-rest-app:latest .",
+
       "sudo -u ubuntu minikube kubectl -p test -- apply -f Kubernetes/minikube/",
-      
-      # Μόνο το port-forward θα μείνει σε nohup στο τέλος
       "sudo -u ubuntu nohup minikube kubectl -p test -- port-forward --address 0.0.0.0 service/citizen-service-lb 8089:8089 > /dev/null 2>&1 &",
       
       "touch /tmp/app_depl_complete"
     ]
+
     
     connection {
       type        = "ssh"
