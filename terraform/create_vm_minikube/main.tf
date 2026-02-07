@@ -66,7 +66,7 @@ resource "terraform_data" "setup_minikube" {
 }
 
 resource "aws_security_group" "minikube_sg" {
-  name        = "minikube-sg-v2" # Άλλαξα το όνομα για να αποφύγουμε συγκρούσεις
+  name        = "minikube-sg-v3" # Άλλαξα το όνομα για να αποφύγουμε συγκρούσεις
   description = "Allow SSH, K8s and App Port"
 
   ingress {
