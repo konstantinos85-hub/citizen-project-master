@@ -51,7 +51,7 @@ resource "null_resource" "wait_for_minikube_instance" {
       "echo 'Repo cloned!'",
 	
       # Apply με τη δομή που έχεις (kubernetes/minikube/)
-      "sudo -u ubuntu minikube kubectl -p test -- apply -f 'kubernetes/minikube/*.yaml'",
+      "sudo -u ubuntu minikube kubectl -p test -- apply -f Kubernetes/minikube/",
       
       # Port-forwarding για την εφαρμογή (Port 8089)
       "sudo -u ubuntu nohup minikube kubectl -p test -- port-forward --address 0.0.0.0 service/citizen-service-lb 8089:8089 > /dev/null 2>&1 &",
