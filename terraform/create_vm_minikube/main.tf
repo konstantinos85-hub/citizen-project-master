@@ -21,6 +21,7 @@ resource "aws_instance" "minikube" {
               sudo usermod -aG docker ubuntu
               sudo systemctl restart docker
               sleep 5
+              # ΔΙΟΡΘΩΜΕΝΟ URL ΠΑΡΑΚΑΤΩ:
               curl -Lo minikube https://storage.googleapis.com
               chmod +x minikube
               sudo install minikube /usr/local/bin/
@@ -83,7 +84,7 @@ resource "null_resource" "wait_for_minikube_instance" {
 }
 
 resource "aws_security_group" "minikube_sg" {
-  name        = "minikube-sg-citizen-v2"
+  name        = "minikube-sg-citizen-v3" # Αλλαγή σε v3 για σιγουριά
   description = "Allow SSH, Minikube and App Port"
 
   ingress {
