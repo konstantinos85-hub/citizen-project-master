@@ -19,7 +19,7 @@ variable "private_key_path" {
 variable "instance_type" {
   description = "Minikube needs t3.medium"
   type        = string
-  default     = "t3.medium"
+  default     = "t2.medium"
 }
 
 variable "ami" {
