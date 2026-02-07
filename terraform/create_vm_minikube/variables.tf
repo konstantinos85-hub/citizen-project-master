@@ -17,10 +17,11 @@ variable "private_key_path" {
 }
 
 variable "instance_type" {
-  description = "Minikube needs t3.medium"
+  description = "c7i-flex.large is perfect for Minikube and Free Tier"
   type        = string
-  default     = "t2.medium"
+  default     = "c7i-flex.large"
 }
+
 
 variable "ami" {
   description = "Ubuntu Server 24.04 LTS (x86) - us-east-1"
