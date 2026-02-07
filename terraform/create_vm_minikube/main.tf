@@ -3,78 +3,88 @@ provider "aws" {
 }
 
 resource "aws_instance" "minikube" {
-  ami                         = var.ami
-  instance_type               = var.instance_type
-  key_name                    = var.key_name
-  associate_public_ip_address = true
+  ami           = var.ami
+  instance_type = var.instance_type
+  key_name      = var.key_name
 
-  # Όλη η εγκατάσταση γίνεται στο boot της μηχανής (Cloud-Init)
   user_data = <<-EOT
               #!/bin/bash
-              # 1. Εγκατάσταση Docker & Git
-              apt-get update -y
-              apt-get install -y docker.io git
-              systemctl enable docker
-              systemctl start docker
-              usermod -aG docker ubuntu
-
-              # 2. Εγκατάσταση Minikube Binary
+              sudo apt-get update -y
+              sudo apt-get install -y docker.io
+              sudo systemctl enable docker
+              sudo systemctl start docker
+              sudo usermod -aG docker ubuntu
+              sudo systemctl restart docker
+              sleep 5
               curl -Lo minikube https://storage.googleapis.com
               chmod +x minikube
-              install minikube /usr/local/bin/
-
-              # 3. Εκκίνηση Minikube (ως χρήστης ubuntu)
-              sudo -u ubuntu minikube start --driver=docker -p test
-
-              # 4. Clone Repo και Deployment εφαρμογής
-              cd /home/ubuntu
-              sudo -u ubuntu git clone ${var.github_repo}
-              cd citizen-project-master
-              
-              # Αναμονή μέχρι να σηκωθεί το Kubernetes API
-              while ! sudo -u ubuntu minikube kubectl -p test -- get nodes; do sleep 10; done
-              
-              # Apply τα YAML αρχεία σου
-              sudo -u ubuntu minikube kubectl -p test -- apply -f yaml/
-              
-              # 5. Port Forwarding για πρόσβαση από το Internet (Θύρα 8089)
-              sudo -u ubuntu nohup minikube kubectl -p test -- port-forward --address 0.0.0.0 service/citizen-service-lb 8089:8089 > /dev/null 2>&1 &
-              
-              # Δημιουργία σήματος ολοκλήρωσης
-              touch /tmp/setup_complete
+              sudo install minikube /usr/local/bin/
+              touch /tmp/docker_minikube_installed	
               EOT
 
   vpc_security_group_ids = [aws_security_group.minikube_sg.id]
 
   tags = {
-    Name = "Minikube-Final-Server"
+    Name = "Citizen-Minikube-EC2"
   }
 }
 
-# Αυτό το resource απλά ελέγχει πότε τελείωσε το User Data
-resource "terraform_data" "wait_for_setup" {
+resource "null_resource" "wait_for_minikube_instance" {
   depends_on = [aws_instance.minikube]
+    
+  provisioner "remote-exec" {
+    inline = [
+      "while [ ! -f /tmp/docker_minikube_installed ]; do sleep 10; done",
+      "sudo usermod -aG docker ubuntu",
+      "sudo -u ubuntu nohup minikube start -p test --driver=docker &",
+      "echo 'Starting minikube'",        
+              
+      "while ! sudo -u ubuntu minikube kubectl -p test -- get nodes > /dev/null 2>&1; do",
+      "echo 'Waiting for Kubernetes API to be ready...'",
+      "sleep 10",
+      "done",
+      "echo 'Minikube is ready!'",
+      
+      # Το δικό σου repository
+      "git clone https://github.com/konstantinos85-hub/citizen-project-master.git",
+      "cd citizen-project-master",
+      "echo 'Repo cloned!'",
+	
+      # Apply με τη δομή που έχεις (kubernetes/minikube/)
+      "sudo -u ubuntu minikube kubectl -p test -- apply -f 'kubernetes/minikube/*.yaml'",
+      
+      # Port-forwarding για την εφαρμογή (Port 8089)
+      "sudo -u ubuntu nohup minikube kubectl -p test -- port-forward --address 0.0.0.0 service/citizen-service-lb 8089:8089 > /dev/null 2>&1 &",
+      
+      "touch /tmp/app_depl_complete"
+    ]
 
-  connection {
-    type        = "ssh"
-    user        = "ubuntu"
-    private_key = file(var.private_key_path)
-    host        = aws_instance.minikube.public_ip
-    timeout     = "15m"
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file(var.private_key_path)
+      host        = aws_instance.minikube.public_ip
+    }
   }
 
   provisioner "remote-exec" {
     inline = [
-      "echo 'Σύνδεση επιτυχής! Περιμένω την ολοκλήρωση της εγκατάστασης (Minikube & App)...'",
-      "while [ ! -f /tmp/setup_complete ]; do sleep 20; done",
-      "echo 'Η εφαρμογή είναι έτοιμη και live!'"
+      "while [ ! -f /tmp/app_depl_complete ]; do sleep 10; done",
+      "echo 'App deployment script completed'"
     ]
+
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file(var.private_key_path)
+      host        = aws_instance.minikube.public_ip
+    }
   }
 }
 
 resource "aws_security_group" "minikube_sg" {
-  name        = "minikube-sg-final-v5"
-  description = "Allow SSH and Port 8089"
+  name        = "minikube-sg-citizen-template"
+  description = "Allow SSH, Minikube and App Port"
 
   ingress {
     from_port   = 22

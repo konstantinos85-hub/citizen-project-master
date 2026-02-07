@@ -7,13 +7,13 @@ variable "aws_region" {
 variable "key_name" {
   description = "Όνομα του SSH key pair στο us-east-1"
   type        = string
-  default     = "cloud.test"
+  default     = "cloud_test"
 }
 
 variable "private_key_path" {
   description = "Το τοπικό μονοπάτι προς το .pem αρχείο"
   type        = string
-  default     = "./cloud.test.pem"
+  default     = "./cloud_test.pem"
 }
 
 variable "instance_type" {
