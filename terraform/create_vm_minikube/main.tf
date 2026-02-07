@@ -36,29 +36,30 @@ resource "null_resource" "wait_for_minikube_instance" {
     inline = [
       "while [ ! -f /tmp/docker_minikube_installed ]; do sleep 10; done",
       "sudo usermod -aG docker ubuntu",
-      "sudo -u ubuntu nohup minikube start -p test --driver=docker &",
-      "echo 'Starting minikube'",        
-              
-      "while ! sudo -u ubuntu minikube kubectl -p test -- get nodes > /dev/null 2>&1; do",
-      "echo 'Waiting for Kubernetes API to be ready...'",
+      
+      # Προσθήκη restart για να σιγουρέψουμε το Docker group
+      "sudo systemctl restart docker",
       "sleep 10",
-      "done",
+
+      # Εκκίνηση Minikube ΧΩΡΙΣ nohup για να το αναγκάσουμε να ξεκινήσει τώρα
+      "sudo -u ubuntu minikube start -p test --driver=docker",
+      "echo 'Minikube started successfully!'",        
+              
+      "echo 'Waiting for Kubernetes API to be ready...'",
+      "while ! sudo -u ubuntu minikube kubectl -p test -- get nodes > /dev/null 2>&1; do sleep 10; done",
       "echo 'Minikube is ready!'",
       
-      # Το δικό σου repository
       "git clone https://github.com/konstantinos85-hub/citizen-project-master.git",
       "cd citizen-project-master",
-      "echo 'Repo cloned!'",
-	
-      # Apply με τη δομή που έχεις (kubernetes/minikube/)
+      
       "sudo -u ubuntu minikube kubectl -p test -- apply -f Kubernetes/minikube/",
       
-      # Port-forwarding για την εφαρμογή (Port 8089)
+      # Μόνο το port-forward θα μείνει σε nohup στο τέλος
       "sudo -u ubuntu nohup minikube kubectl -p test -- port-forward --address 0.0.0.0 service/citizen-service-lb 8089:8089 > /dev/null 2>&1 &",
       
       "touch /tmp/app_depl_complete"
     ]
-
+    
     connection {
       type        = "ssh"
       user        = "ubuntu"
