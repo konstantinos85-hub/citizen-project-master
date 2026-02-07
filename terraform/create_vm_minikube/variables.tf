@@ -1,34 +1,35 @@
-# 1. Περιοχή στο νέφος της AWS
 variable "aws_region" {
-  description = "Η περιοχή (region) της AWS όπου θα δημιουργηθεί η υποδομή"
+  description = "AWS region"
   type        = string
   default     = "us-west-2"
 }
 
-# 2. Όνομα ζεύγους κλειδιών
 variable "key_name" {
-  description = "Το όνομα του ζεύγους κλειδιών (key pair) για τη σύνδεση μέσω SSH"
+  description = "Όνομα του SSH key pair στο AWS"
   type        = string
   default     = "cloud.test"
 }
 
-# 3. Τύπος στιγμιότυπου εικονικής μηχανής
+variable "private_key_path" {
+  description = "Το τοπικό μονοπάτι προς το .pem αρχείο"
+  type        = string
+  default     = "./cloud.test.pem" # Βεβαιώσου ότι το αρχείο είναι στον ίδιο φάκελο
+}
+
 variable "instance_type" {
-  description = "Ο τύπος του στιγμιότυπου (instance type) της εικονικής μηχανής"
+  description = "Minikube requires at least 2 vCPUs (t3.medium)"
   type        = string
-  default     = "t3.micro"
+  default     = "t3.medium" 
 }
 
-# 4. Αναγνωριστικό εικόνας AMI
 variable "ami" {
-  description = "Το ID της εικόνας AMI (Amazon Machine Image) για το ΛΣ Ubuntu"
+  description = "Ubuntu 24.04 LTS AMI"
   type        = string
-  default     = "ami-0efcece6bed30fd98"
+  default     = "ami-0aff18ec83b712f05" 
 }
 
-# 5. Μονοπάτι προς τα αρχεία YAML
-variable "path" {
-  description = "Το μονοπάτι προς τον φάκελο όπου υπάρχουν τα αρχεία YAML της εφαρμογής"
+variable "github_repo" {
+  description = "Το URL του repository σου"
   type        = string
-  default     = "../../yaml"
+  default     = "https://github.com/konstantinos85-hub/citizen-project-master.git"
 }

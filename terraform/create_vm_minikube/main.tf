@@ -10,81 +10,63 @@ resource "aws_instance" "minikube" {
   user_data = <<-EOT
               #!/bin/bash
               sudo apt-get update -y
-              # Εγκατάσταση Docker
               sudo apt-get install -y docker.io
               sudo systemctl enable docker
               sudo systemctl start docker
               sudo usermod -aG docker ubuntu
               
-              # Εγκατάσταση Minikube
-              curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+              curl -Lo minikube https://storage.googleapis.com
               chmod +x minikube
               sudo install minikube /usr/local/bin/
-                  
               touch /tmp/docker_minikube_installed	
               EOT
 
   vpc_security_group_ids = [aws_security_group.minikube_sg.id]
 
   tags = {
-    Name = "Minikube-EC2"
+    Name = "Minikube-Citizen-Project"
   }
 }
 
-resource "null_resource" "wait_for_minikube_instance" {
+resource "terraform_data" "setup_minikube" {
   depends_on = [aws_instance.minikube]
-    
-  provisioner "remote-exec" {
+
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file(var.private_key_path)
+    host        = aws_instance.minikube.public_ip
+  }
+
+   provisioner "remote-exec" {
     inline = [
       "while [ ! -f /tmp/docker_minikube_installed ]; do sleep 10; done",
       "sudo usermod -aG docker ubuntu",
-      # Εκκίνηση minikube
       "sudo -u ubuntu nohup minikube start -p test --driver=docker &",
-      "echo 'Starting minikube'",        
-              
-      "while ! sudo -u ubuntu minikube kubectl -p test -- get nodes > /dev/null 2>&1; do",
-      "echo 'Waiting for Kubernetes API to be ready...'",
-      "sleep 10",
-      "done",
-      "echo 'Minikube is ready!'",
       
-      # Εδώ βάζουμε το ΔΙΚΟ ΣΟΥ repo
-      "git clone https://github.com/konstantinos85-hub/citizen-project-master.git",
-	  "cd citizen-project-master",
-	  "echo 'Repo cloned!'",
-	
-      # Εδώ βάζουμε το φάκελο yaml/ που έχεις στο repo σου
+      "echo 'Waiting for Kubernetes API...'",
+      "while ! sudo -u ubuntu minikube kubectl -p test -- get nodes > /dev/null 2>&1; do sleep 10; done",
+      
+      "git clone ${var.github_repo}",
+      "cd citizen-project-master",
+      
+      # 1. Πρώτα κάνεις apply τα YAML
       "sudo -u ubuntu minikube kubectl -p test -- apply -f yaml/",
-      "touch /tmp/app_depl_complete"
+      
+      # 2. Περιμένεις λίγα δευτερόλεπτα να σηκωθεί το service
+      "sleep 15", 
+      
+      # 3. ΕΔΩ ΒΑΖΕΙΣ ΤΗΝ ΕΝΤΟΛΗ
+      "sudo -u ubuntu nohup minikube kubectl -p test -- port-forward --address 0.0.0.0 service/citizen-service-lb 8089:8089 > /dev/null 2>&1 &",
+      
+      "echo 'Deployment and Port-Forwarding complete!'"
     ]
-
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      # ΠΡΟΣΟΧΗ: Εδώ το μονοπάτι για το Mac σου
-      private_key = file("${path.module}/cloud.test.pem")
-      host        = aws_instance.minikube.public_ip
-    }
   }
 
-  provisioner "remote-exec" {
-    inline = [
-      "while [ ! -f /tmp/app_depl_complete ]; do sleep 10; done",
-      "echo 'App deployment script completed'"
-    ]
-
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = file("${path.module}/cloud.test.pem")
-      host        = aws_instance.minikube.public_ip
-    }
-  }
-}
 
 resource "aws_security_group" "minikube_sg" {
   name        = "minikube-sg"
-  description = "Allow SSH, Minikube and App Port"
+  description = "SSH, Minikube and App Port"
 
   ingress {
     from_port   = 22
@@ -100,7 +82,6 @@ resource "aws_security_group" "minikube_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Προσθήκη της θύρας 8089 για την εφαρμογή σου
   ingress {
     from_port   = 8089
     to_port     = 8089
