@@ -41,7 +41,7 @@ jobs:
     # ΠΡΟΣΘΗΚΗ: Ορίζουμε τον φάκελο εργασίας για όλο το Job
     defaults:
       run:
-        working-directory: ./create_vm_minikube
+        working-directory: create_vm_minikube
     
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
