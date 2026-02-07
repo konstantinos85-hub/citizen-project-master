@@ -25,7 +25,7 @@ variable "instance_type" {
 variable "ami" {
   description = "Ubuntu 24.04 LTS AMI"
   type        = string
-  default     = "ami-0e2c8ccd4e193c3e9"" 
+  default     = "ami-0e2c8ccd4e193c3e9"
 }
 
 variable "github_repo" {
