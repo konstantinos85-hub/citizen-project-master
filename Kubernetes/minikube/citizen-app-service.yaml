@@ -3,12 +3,12 @@ kind: Service
 metadata:
   name: citizen-service-lb
 spec:
-  # Προσδιορίζουμε πως η υπηρεσία θα είναι τύπου εξισορροπητή φορτίου
+  # Τύπος LoadBalancer για πρόσβαση στην υπηρεσία
   type: LoadBalancer 
   selector:
-    # Επιλογέας ενοτήτων για τη σύνδεση με το Deployment
+    # Σύνδεση με τα Pods που έχουν το label app: citizen-service
     app: citizen-service 
   ports:
     - protocol: TCP
-      port: 80          # Η θύρα στην οποία δέχεται αιτήσεις η υπηρεσία
-      targetPort: 8089 # Η θύρα στην οποία ακούει το δοχείο (container)
+      port: 8089        # ΑΛΛΑΓΗ: Η θύρα στην οποία θα χτυπάς (IP:8089)
+      targetPort: 8089  # Η θύρα της Java εφαρμογής μέσα στο container

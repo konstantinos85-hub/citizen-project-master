@@ -5,7 +5,7 @@ metadata:
   labels:
     app: citizen-service
 spec:
-  replicas: 2 
+  replicas: 1 # Μειωμένο σε 1 για εξοικονόμηση πόρων στο Minikube
   selector:
     matchLabels:
       app: citizen-service
@@ -19,14 +19,14 @@ spec:
         image: citizen-service:latest 
         imagePullPolicy: Never
         ports:
-        - containerPort: 8089 # Ενημερωμένο στην πραγματική θύρα της εφαρμογής
+        - containerPort: 8089 
         resources:
           requests:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "100m"   # Χαμηλή απαίτηση (0.1 CPU) για να ξεκινάει αμέσως
+            memory: "256Mi"
           limits:
-            cpu: "2000m"
-            memory: "1024Mi"
+            cpu: "500m"   # Όριο μέχρι 0.5 CPU
+            memory: "512Mi"
         env:
         - name: DB_USER
           valueFrom:
@@ -43,4 +43,6 @@ spec:
         - name: DB_NAME
           value: "citizen_db"
         - name: SERVER_PORT
-          value: "8089" # Ενημερωμένο για να συμφωνεί με τον Tomcat
+          value: "8089"
+
+		  
