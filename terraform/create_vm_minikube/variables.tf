@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "us-west-2"
+  default     = "us-east-1"
 }
 
 variable "key_name" {
@@ -25,7 +25,7 @@ variable "instance_type" {
 variable "ami" {
   description = "Ubuntu 24.04 LTS AMI"
   type        = string
-  default     = "ami-0aff18ec83b712f05" 
+  default     = "ami-0e2c8ccd4e193c3e9"" 
 }
 
 variable "github_repo" {
