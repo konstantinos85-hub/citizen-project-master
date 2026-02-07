@@ -1,11 +1,11 @@
 variable "aws_region" {
-  description = "AWS region"
+  description = "Region N. Virginia"
   type        = string
   default     = "us-east-1"
 }
 
 variable "key_name" {
-  description = "Όνομα του SSH key pair στο AWS"
+  description = "Όνομα του SSH key pair στο us-east-1"
   type        = string
   default     = "cloud.test"
 }
@@ -13,19 +13,19 @@ variable "key_name" {
 variable "private_key_path" {
   description = "Το τοπικό μονοπάτι προς το .pem αρχείο"
   type        = string
-  default     = "./cloud.test.pem" # Βεβαιώσου ότι το αρχείο είναι στον ίδιο φάκελο
+  default     = "./cloud.test.pem"
 }
 
 variable "instance_type" {
-  description = "Minikube requires at least 2 vCPUs (t3.medium)"
+  description = "Minikube needs t3.medium"
   type        = string
-  default     = "t3.medium" 
+  default     = "t3.medium"
 }
 
 variable "ami" {
-  description = "Ubuntu 24.04 LTS AMI"
+  description = "Ubuntu Server 24.04 LTS (x86) - us-east-1"
   type        = string
-  default     = "ami-0e2c8ccd4e193c3e9"
+  default     = "ami-0b6c6ebed2801a5cb" 
 }
 
 variable "github_repo" {
