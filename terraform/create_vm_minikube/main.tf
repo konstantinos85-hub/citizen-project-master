@@ -6,6 +6,11 @@ resource "aws_instance" "minikube" {
   ami           = var.ami
   instance_type = var.instance_type
   key_name      = var.key_name
+  
+  root_block_device {
+    volume_size = 20
+    volume_type = "gp3"
+  }
 
   user_data = <<-EOT
               #!/bin/bash
