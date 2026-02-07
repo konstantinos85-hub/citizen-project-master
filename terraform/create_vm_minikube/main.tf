@@ -83,7 +83,7 @@ resource "null_resource" "wait_for_minikube_instance" {
 }
 
 resource "aws_security_group" "minikube_sg" {
-  name        = "minikube-sg-citizen-template"
+  name        = "minikube-sg-citizen-v2"
   description = "Allow SSH, Minikube and App Port"
 
   ingress {
