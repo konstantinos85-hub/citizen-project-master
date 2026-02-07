@@ -34,15 +34,19 @@ resource "aws_instance" "minikube" {
 resource "terraform_data" "setup_minikube" {
   depends_on = [aws_instance.minikube]
 
-  connection {
+    connection {
     type        = "ssh"
     user        = "ubuntu"
     private_key = file(var.private_key_path)
     host        = aws_instance.minikube.public_ip
+    timeout     = "10m"      # Αυξάνουμε το χρόνο
+    agent       = false
   }
+
 
   provisioner "remote-exec" {
     inline = [
+      "sleep 30",
       "while [ ! -f /tmp/docker_minikube_installed ]; do sleep 10; done",
       "sudo usermod -aG docker ubuntu",
       # Ξεκινάμε το minikube
