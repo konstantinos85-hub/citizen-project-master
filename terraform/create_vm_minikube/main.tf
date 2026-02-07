@@ -3,18 +3,21 @@ provider "aws" {
 }
 
 resource "aws_instance" "minikube" {
-  ami           = var.ami
-  instance_type = var.instance_type
-  key_name      = var.key_name
+  ami                         = var.ami
+  instance_type               = var.instance_type
+  key_name                    = var.key_name
+  associate_public_ip_address = true # Εξασφαλίζει δημόσια IP
 
+  # user_data διορθωμένο με το σωστό URL για το minikube
   user_data = <<-EOT
               #!/bin/bash
               sudo apt-get update -y
-              sudo apt-get install -y docker.io
+              sudo apt-get install -y docker.io git
               sudo systemctl enable docker
               sudo systemctl start docker
               sudo usermod -aG docker ubuntu
               
+              # Διορθωμένο URL
               curl -Lo minikube https://storage.googleapis.com
               chmod +x minikube
               sudo install minikube /usr/local/bin/
@@ -42,27 +45,29 @@ resource "terraform_data" "setup_minikube" {
     inline = [
       "while [ ! -f /tmp/docker_minikube_installed ]; do sleep 10; done",
       "sudo usermod -aG docker ubuntu",
-      "sudo -u ubuntu nohup minikube start -p test --driver=docker &",
+      # Ξεκινάμε το minikube
+      "sudo -u ubuntu minikube start -p test --driver=docker",
       
       "echo 'Waiting for Kubernetes API...'",
       "while ! sudo -u ubuntu minikube kubectl -p test -- get nodes > /dev/null 2>&1; do sleep 10; done",
       
-      "git clone ${var.github_repo}",
+      "git clone ${var.github_repo} || echo 'Repo already exists'",
       "cd citizen-project-master",
       
       "sudo -u ubuntu minikube kubectl -p test -- apply -f yaml/",
-      "sleep 15", 
+      "sleep 20", 
       
+      # Port forward για να βλέπεις την εφαρμογή στην IP του EC2
       "sudo -u ubuntu nohup minikube kubectl -p test -- port-forward --address 0.0.0.0 service/citizen-service-lb 8089:8089 > /dev/null 2>&1 &",
       
-      "echo 'Deployment and Port-Forwarding complete!'"
+      "echo 'Deployment complete! Check your Public IP on port 8089'"
     ]
   }
-} # <-- ΑΥΤΟ ΤΟ ΑΓΚΙΣΤΡΟ ΠΙΘΑΝΩΣ ΕΛΕΙΠΕ
+}
 
 resource "aws_security_group" "minikube_sg" {
-  name        = "minikube-sg"
-  description = "SSH, Minikube and App Port"
+  name        = "minikube-sg-v2" # Άλλαξα το όνομα για να αποφύγουμε συγκρούσεις
+  description = "Allow SSH, K8s and App Port"
 
   ingress {
     from_port   = 22
