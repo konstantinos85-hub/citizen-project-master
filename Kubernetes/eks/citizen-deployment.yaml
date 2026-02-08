@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: citizen-service
+  namespace: default
+  labels:
+    app: citizen-service
+spec:
+  replicas: 2 # Ορίζουμε 2 αντίγραφα για υψηλή διαθεσιμότητα στο EKS
+  selector:
+    matchLabels:
+      app: citizen-service
+  template:
+    metadata:
+      labels:
+        app: citizen-service
+    spec:
+      containers:
+      - name: citizen-api
+        # ΑΝΤΙΚΑΤΑΣΤΗΣΤΕ με το δικό σας πραγματικό image από το Docker Hub
+        image: your-docker-username/citizen-api:latest 
+        ports:
+        - containerPort: 8089
+          name: api-port
+        
+        # Ρυθμίσεις περιβάλλοντος για τη σύνδεση με τη MySQL
+        env:
+        - name: DB_HOST
+          value: "mysql-service" # Το όνομα του Service της MySQL
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_NAME
+          value: "citizen_db"
+          
+        # Λήψη Credentials από το user-secret.yaml που ήδη έχεις
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+
+        # Έλεγχοι υγείας (Προαιρετικά αλλά προτεινόμενα για EKS)
+        livenessProbe:
+          httpGet:
+            path: /health # Ή όποιο endpoint υγείας έχει η εφαρμογή σας
+            port: 8089
+          initialDelaySeconds: 30
+          periodSeconds: 10

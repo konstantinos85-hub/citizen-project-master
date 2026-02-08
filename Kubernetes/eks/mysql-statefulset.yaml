@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: default
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: mysql
+  clusterIP: None # Headless service για σταθερό DNS εντός του cluster
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: default
+spec:
+  serviceName: "mysql-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0 # Ή την έκδοση που χρησιμοποιήσατε στην 4η άσκηση
+        env:
+        - name: MYSQL_DATABASE
+          value: "citizen_db"
+        # Λήψη του root password από το secret που ήδη έχεις
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          # ΠΡΟΣΟΧΗ: Πρέπει να είναι το όνομα που έχεις στο mysql-claim.yaml
+          claimName: mysql-pvc 
